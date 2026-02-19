@@ -24,11 +24,6 @@ Private container registry: yes
 Components: ibm-cert-manager,ibm-licensing,cpfs,cpd_platform,ws,wml,analyticsengine,ws_pipelines
 ```
 
-# CP4D 5.1.0 → 5.2.2 Upgrade Runbook  
-**Desjardins – IBM Software Hub / Cloud Pak for Data**
-
----
-
 # Table of Contents
 
 1. [Overview](#1-overview)  
@@ -64,7 +59,7 @@ Components: ibm-cert-manager,ibm-licensing,cpfs,cpd_platform,ws,wml,analyticseng
 
 # 1. Overview
 
-This runbook describes the upgrade procedure from IBM Software Hub / Cloud Pak for Data **5.2.x to 5.2.2**.
+This runbook describes the upgrade procedure from IBM Software Hub / Cloud Pak for Data **5.1.0 to 5.2.2**.
 
 ---
 
@@ -79,7 +74,7 @@ This runbook describes the upgrade procedure from IBM Software Hub / Cloud Pak f
   - Projects  
   - Catalogs  
   - Terms  
-  - Additional metadata as required  
+  - Additional metadata as required
 
 ## 2.2 Upgrade Clients
 
@@ -358,4 +353,5 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 - All pods running  
 - CR reconciled  
 - Services validated  
+
 - GUI confirms 5.2.2
