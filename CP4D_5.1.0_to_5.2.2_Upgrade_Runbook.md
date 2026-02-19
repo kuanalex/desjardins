@@ -169,14 +169,19 @@ Test:
 cpd-cli manage oc get node
 ```
 
-Check pods:
+Check for any unhealthy or problematic pods:
 
 ```
 oc get pods --all-namespaces -o wide |grep -Eiv '1/1|2/2|3/3|4/4|5/5|6/6|7/7|8/8|9/9|10/10|11/11|12/12|13/13|complete|download'
 ```
 
-## 4.2 Upgrade Certificate Manager & License Service
+```
+oc get po -A -owide | egrep -v '([0-9])/\1' | egrep -v 'Completed'
+```
 
+## 4.2 Upgrade Certificate Manager & License Service - Est. 3 minutes
+
+Upgrade the License Service and the IBM Certificate manager, if it is installed
 ```
 cpd-cli manage apply-cluster-components \
   --release=${VERSION} \
@@ -185,8 +190,22 @@ cpd-cli manage apply-cluster-components \
   --licensing_ns=${PROJECT_LICENSE_SERVICE}
 ```
 
-## 4.3 Upgrade Scheduler
+Environments without the IBM Certificate manager use
+```
+cpd-cli manage apply-cluster-components \
+--release=${VERSION} \
+--license_acceptance=true \
+--licensing_ns=${PROJECT_LICENSE_SERVICE}
+```
 
+Confirm that the License Service pods are Running or Completed
+```
+ oc get pods --namespace=${PROJECT_LICENSE_SERVICE}
+```
+
+## 4.3 Upgrade Scheduler - Est. 3 minutes
+
+If the scheduling service is installed, upgrade the scheduling service
 ```
 cpd-cli manage apply-scheduler \
   --release=${VERSION} \
@@ -196,7 +215,7 @@ cpd-cli manage apply-scheduler \
 
 ---
 
-# 5. Apply Entitlements
+# 5. Apply Entitlements - Est 1-2 minutes
 
 DEV / CERT:
 
@@ -229,7 +248,7 @@ cpd-cli manage apply-entitlement \
 
 ---
 
-# 6. Cluster Health Checks
+# 6. Cluster Health Checks - Est 1-2 minutes
 
 ```
 cpd-cli health cluster
@@ -355,3 +374,4 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 - Services validated  
 
 - GUI confirms 5.2.2
+
