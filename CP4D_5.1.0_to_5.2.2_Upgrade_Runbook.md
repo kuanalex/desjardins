@@ -203,7 +203,7 @@ Confirm that the License Service pods are Running or Completed
  oc get pods --namespace=${PROJECT_LICENSE_SERVICE}
 ```
 
-## 4.3 Upgrade Scheduler - Est. 3 minutes
+## 4.3 Upgrade Scheduler - Est. 7-8 minutes
 
 If the scheduling service is installed, upgrade the scheduling service
 ```
@@ -215,7 +215,7 @@ cpd-cli manage apply-scheduler \
 
 ---
 
-# 5. Apply Entitlements - Est 1-2 minutes
+# 5. Apply Entitlements - Est. 1-2 minutes
 
 DEV / CERT:
 
@@ -248,7 +248,7 @@ cpd-cli manage apply-entitlement \
 
 ---
 
-# 6. Cluster Health Checks - Est 1-2 minutes
+# 6. Cluster Health Checks - Est. 1-2 minutes
 
 ```
 cpd-cli health cluster
@@ -262,23 +262,26 @@ cpd-cli health network-connectivity --control_plane_ns=${PROJECT_CPD_INST_OPERAN
 
 # 7. Upgrade CPD Instance
 
-## 7.1 Setup Instance
+## 7.1 Setup Instance - Est. 55-60 minutes
 
 ```
 cpd-cli manage setup-instance \
-  --release=${VERSION} \
-  --license_acceptance=true \
-  --cpd_operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
+--release=${VERSION} \
+--license_acceptance=true \
+--cpd_operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--block_storage_class=${STG_CLASS_BLOCK} \
+--file_storage_class=${STG_CLASS_FILE} \
+--run_storage_tests=false
 ```
 
-## 7.2 Upgrade Operators
+## 7.2 Upgrade Operators - Est. 30 minutes
 
 ```
 cpd-cli manage apply-olm \
-  --release=${VERSION} \
-  --cpd_operator_ns=${PROJECT_CPD_INST_OPERATORS} \
-  --upgrade=true
+--release=${VERSION} \
+--cpd_operator_ns=${PROJECT_CPD_INST_OPERATORS} \
+--upgrade=true
 ```
 
 ## 7.3 Upgrade Services (Batch)
@@ -374,4 +377,5 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 - Services validated  
 
 - GUI confirms 5.2.2
+
 
