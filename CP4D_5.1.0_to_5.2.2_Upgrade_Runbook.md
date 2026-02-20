@@ -275,7 +275,7 @@ cpd-cli manage setup-instance \
 --run_storage_tests=false
 ```
 
-## 7.2 Upgrade Operators - Est. 30 minutes
+## 7.2 Upgrade Operators - Est. 25-30 minutes
 
 ```
 cpd-cli manage apply-olm \
@@ -284,17 +284,49 @@ cpd-cli manage apply-olm \
 --upgrade=true
 ```
 
-## 7.3 Upgrade Services (Batch)
+## 7.3 Upgrade Services - ws,wml,analyticsengine,ws_pipelines
 
+Upgrade Watson Studio and CCS - Est. 65-70 minutes
 ```
 cpd-cli manage apply-cr \
-  --release=${VERSION} \
-  --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
-  --components=${COMPONENTS} \
-  --block_storage_class=${STG_CLASS_BLOCK} \
-  --file_storage_class=${STG_CLASS_FILE} \
-  --license_acceptance=true \
-  --upgrade=true
+--components=ws \
+--release=${VERSION} \
+--cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--license_acceptance=true \
+--upgrade=true
+```
+
+Upgrade Watson Machine Learning - Est. 20 minutes
+```
+cpd-cli manage apply-cr \
+--components=wml \
+--release=${VERSION} \
+--cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--license_acceptance=true \
+--upgrade=true
+```
+
+Upgrade Analytics Engine - Est. 20 minutes
+```
+cpd-cli manage apply-cr \
+--components=analyticsengine \
+--release=${VERSION} \
+--cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--param-file=/tmp/work/install-options.yml \
+--license_acceptance=true \
+--upgrade=true
+```
+
+Upgrade Pipelines - Est. 20 minutes
+```
+cpd-cli manage apply-cr \
+--release=${VERSION} \
+--cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
+--components=ws_pipelines \
+--block_storage_class=${STG_CLASS_BLOCK} \
+--file_storage_class=${STG_CLASS_FILE} \
+--license_acceptance=true \
+--upgrade=true
 ```
 
 ---
@@ -377,5 +409,6 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 - Services validated  
 
 - GUI confirms 5.2.2
+
 
 
