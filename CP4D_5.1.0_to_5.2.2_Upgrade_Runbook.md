@@ -817,13 +817,12 @@ AUTH_TOKEN=$(cat /etc/.secrets/wkc/service_id_credential)
 
 Start the consolidation
 ```
-curl -k -X PUT "${INSTANCE_URL}/v2/shared_assets/initialize_content?bss_account_id=999" \
-     -H "Authorization: Basic $AUTH_TOKEN"
+curl -k -X PUT "${INSTANCE_URL}/v2/shared_assets/initialize_content?bss_account_id=999" -H "Authorization: Basic $AUTH_TOKEN"
 ```
 
 The command returns a transaction ID
 ```
-...
+{"transaction_id":"8itd5ruv4bujzcfna3rnf04zw"}
 ```
 
 Get the name of a catalog-api pod
@@ -1018,3 +1017,4 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 - CR reconciled  
 - Services validated  
 - GUI confirms 5.2.2
+
