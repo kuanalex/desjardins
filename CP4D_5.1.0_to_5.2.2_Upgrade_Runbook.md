@@ -880,6 +880,223 @@ If the command returns an empty response, proceed to the next step
 
 If the preceding commands returned empty responses, wait 10 minutes before checking the pod logs again
 
+If the commands repeatedly return an empty response, this might be related to this [Known Issue - The consolidation of catalog-api service migration PostgreSQL database is not being completed] (https://www.ibm.com/mysupport/s/defect/aCIgJ0000005J6r/dt450745?language=en_US)
+
+When carrying out the Completing the catalog-api service migration process, you may encounter issues when consolidating the PostgreSQL database (Step 6)
+
+Please be aware that you may not receive all the information you need about the completion of the consolidation, and that you may not know if the process was completed successfully
+
+The following scripts will allow you to check whether there are any pending items to be consolidated in the PostgreSQL database, or complete them if necessary, based on the output of the first script
+
+Create the consolidation-check.sh script
+```
+vi consolidation-check.sh
+```
+
+Copy the following script contents into the file
+```
+#!/bin/bash
+
+
+
+# Make sure PROJECT_CPD_INST_OPERANDS is set
+
+if [ -z "$PROJECT_CPD_INST_OPERANDS" ]; then
+
+ echo "Environment variable PROJECT_CPD_INST_OPERANDS is not defined for namespace where CPD is running."
+
+ exit 1
+
+fi
+
+
+
+echo "PROJECT_CPD_INST_OPERANDS namespace is: $PROJECT_CPD_INST_OPERANDS"
+
+
+
+# Step 1: Find the replica pod
+
+REPLICA_POD=$(oc get pods -n $PROJECT_CPD_INST_OPERANDS -l app=ccs-cams-postgres -o jsonpath='{range .items[?(@.metadata.labels.role=="replica")]}{.metadata.name}{"\n"}{end}')
+
+
+
+if [ -z "$REPLICA_POD" ]; then
+
+ echo "No replica pod found."
+
+ exit 1
+
+fi
+
+
+
+echo "Replica pod: $REPLICA_POD"
+
+
+
+# Step 2: Extract JDBC URI from a secret
+
+JDBC_URI=$(oc get secret ccs-cams-postgres-app -n $PROJECT_CPD_INST_OPERANDS -o jsonpath="{.data.uri}" | base64 -d)
+
+
+
+if [ -z "$JDBC_URI" ]; then
+
+ echo "JDBC URI not found in secret."
+
+ exit 1
+
+fi
+
+
+
+# Set path on the pod to save the dump file 
+
+TARGET_PATH="/var/lib/postgresql/data/forpgdump"
+
+# Step 3: Run query to check status inside the pod
+
+echo "number of containers remaining"
+
+oc exec "$REPLICA_POD" -n $PROJECT_CPD_INST_OPERANDS -- bash -c "psql -d ${JDBC_URI} -c \"SELECT count(id) FROM cams.catalog where container_type = 'catalog' and (is_governed='true' or subtype='ibm_data_product_catalog') and catalog.bss_account = '999' and (is_sharing_properties IS NULL or is_sharing_properties = 'false'); \""
+
+echo "number of assets remaining"
+
+oc exec "$REPLICA_POD" -n $PROJECT_CPD_INST_OPERANDS -- bash -c "psql -d ${JDBC_URI} -c \"SELECT COUNT(resource_key) as asset_count FROM ( SELECT DISTINCT ON (resource_key) resource_key, catalog_id, asset_id from cams.asset where is_revision='false' and state = 'available' and asset_type = 'data_asset' and set_id is NULL and (resource_key like '%|%' or identity_key like '%|%' ) and (catalog_id in (SELECT id FROM cams.catalog where is_sharing_properties = 'true' and container_type = 'catalog' and bss_account = '999')));\""
+```
+
+Update permissions as required
+```
+chmod +x consolidation-check.sh
+```
+
+Run the consolidation-check.sh
+```
+./consolidation-check.sh
+```
+
+If both queries return output as 0 consolidation is complete, this is an example of output showing 0 for both queries
+```
+PROJECT_CPD_INST_OPERANDS namespace is: cpd-instance
+Replica pod: ccs-cams-postgres-2
+number of containers remaining
+Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
+ count 
+-------
+     0
+(1 row)
+
+number of assets remaining
+Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
+ asset_count 
+-------------
+           0
+(1 row)
+```
+
+If you found any other output showing pending items, run the following script
+```
+vi complete-consolidation.sh
+```
+
+Copy the following script contents into the file 
+```
+#!/bin/bash
+
+set +x
+
+# Make sure PROJECT_CPD_INST_OPERANDS is set
+
+if [ -z "$PROJECT_CPD_INST_OPERANDS" ]; then
+
+ echo "Environment variable PROJECT_CPD_INST_OPERANDS is not defined for namespace where CPD is running."
+
+ exit 1
+
+fi
+
+echo "PROJECT_CPD_INST_OPERANDS namespace is: $PROJECT_CPD_INST_OPERANDS"
+
+# Step 1: Find the replica pod
+
+REPLICA_POD=$(oc get pods -n $PROJECT_CPD_INST_OPERANDS -l app=ccs-cams-postgres -o jsonpath='{range .items[?(@.metadata.labels.role=="replica")]}{.metadata.name}{"\n"}{end}')
+
+if [ -z "$REPLICA_POD" ]; then
+
+ echo "No replica pod found."
+
+ exit 1
+
+fi
+
+echo "Replica pod: $REPLICA_POD"
+
+# Step 2: Extract JDBC URI from a secret
+
+JDBC_URI=$(oc get secret ccs-cams-postgres-app -n $PROJECT_CPD_INST_OPERANDS -o jsonpath="{.data.uri}" | base64 -d)
+
+if [ -z "$JDBC_URI" ]; then
+
+ echo "JDBC URI not found in secret."
+
+ exit 1
+
+fi
+
+ICP4D_URL=$(oc get route cpd -o json | grep -i "host\"" | head -n 1 | awk -F '"' '{print $4}')
+
+AUTH_TOKEN=$(oc get secret wdp-service-id -o yaml | grep "service-id-credentials:" | head -n 1 | awk -F ": " '{print $2}'| base64 -d | xargs)
+
+oc exec "$REPLICA_POD" -n $PROJECT_CPD_INST_OPERANDS -- bash -c "psql -d ${JDBC_URI} -c \"SELECT asset_id,catalog_id FROM ( SELECT DISTINCT ON (resource_key) resource_key,metadata, catalog_id, asset_id from cams.asset where is_revision='false' and state = 'available' and asset_type = 'data_asset' and set_id is NULL and (resource_key like '%|%' or identity_key like '%|%' ) and (catalog_id in (SELECT id FROM cams.catalog where is_sharing_properties = 'true' and container_type = 'catalog' and bss_account = '999'))) limit 10;\"" | tail -n +3 | grep -v "(" | awk -F '|' '{print $1,$2}' > asset_ids.txt
+
+INPUT_FILE="asset_ids.txt"
+
+# Check if the file exists
+
+if [[ ! -f "$INPUT_FILE" ]]; then
+
+ echo "Error: File '$INPUT_FILE' not found."
+
+ exit 1
+
+fi
+
+
+
+# Read the file line by line
+
+while IFS= read -r line; do
+
+ # Process each line 
+
+ read -ra ids <<< $line
+
+ asset_id=${ids[0]}
+
+ catalog_id=${ids[1]}
+
+ curl -k -X PUT "https://${ICP4D_URL}/v2/shared_assets/initialize_content?bss_account_id=999&asset_id=${asset_id}&catalog_id=${catalog_id}" -H "Authorization: Basic $AUTH_TOKEN" -v
+
+  
+
+ echo "Processing asset id : ${ids[0]}"
+
+done < "$INPUT_FILE"
+```
+
+Update permissions as required
+```
+chmod +x complete-consolidation.sh
+```
+
+Run the consolidation-check.sh
+```
+./complete-consolidation.sh
+```
+
+This will complete the consolidation of the pending items
+
 What to do if the consolidation completed successfully
 
 If the PostgreSQL database consolidation was successful, wait several weeks to confirm that the projects, catalogs, and spaces in your environment are working as expected
@@ -1017,4 +1234,5 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 - CR reconciled  
 - Services validated  
 - GUI confirms 5.2.2
+
 
