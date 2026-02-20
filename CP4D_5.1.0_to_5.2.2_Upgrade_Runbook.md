@@ -296,7 +296,7 @@ cpd-cli manage apply-cr \
 --upgrade=true
 ```
 
-Upgrade Watson Machine Learning - Est. 20 minutes
+Upgrade Watson Machine Learning - Est. 43 minutes
 ```
 cpd-cli manage apply-cr \
 --components=wml \
@@ -306,7 +306,7 @@ cpd-cli manage apply-cr \
 --upgrade=true
 ```
 
-Upgrade Analytics Engine - Est. 20 minutes
+Upgrade Analytics Engine - Est. 17-20 minutes
 ```
 cpd-cli manage apply-cr \
 --components=analyticsengine \
@@ -320,11 +320,9 @@ cpd-cli manage apply-cr \
 Upgrade Pipelines - Est. 20 minutes
 ```
 cpd-cli manage apply-cr \
+--components=ws_pipelines \
 --release=${VERSION} \
 --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS} \
---components=ws_pipelines \
---block_storage_class=${STG_CLASS_BLOCK} \
---file_storage_class=${STG_CLASS_FILE} \
 --license_acceptance=true \
 --upgrade=true
 ```
@@ -409,6 +407,7 @@ cpd-cli manage get-cr-status --cpd_instance_ns=${PROJECT_CPD_INST_OPERANDS}
 - Services validated  
 
 - GUI confirms 5.2.2
+
 
 
 
